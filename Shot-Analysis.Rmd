@@ -1,0 +1,140 @@
+
+---
+output:
+  html_document:
+    df_print: paged
+  pdf_document: default
+header-includes: \usepackage{color}
+---
+----
+OKC Thunder Data Science & Solutions Technical Assessment
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r, echo = F, results = 'hide', message=F, warning = F}
+library(foreign)      #Default package for almost all code, lets your read files into R
+library(ggplot2)      #plotting package
+library(colorspace)   #better colors for ggplot
+library(broom)        #a widely used, but relatively new, package for producing tidier data and tidier output; part of tidyverse
+library(tidyverse)    #a widely used, but relatively new, package for producing tidier data and tidier output
+library(knitr)        #helps the knitting process. In particular, it lets the include_graphics command run
+library(scales)
+library(knitr)
+library(modelr)
+```
+
+# Data Science & Solutions Technical Assessment
+
+### Author:
+Eric Wnorowski
+
+## Deliverables
+Determine the shot zones (2PT, NC3 or C3) and calculate for each team the:
+  1) Shot Distribution: the percentage of team shots attempted within a zone
+  2) eFG%: the effective field goal percentage of team shots within a zone
+  
+### Import Data
+```{r, echo = T, results = 'hide', message=F, warning = F}
+shots <- read.csv("Datasets/shots_data.csv")
+```
+
+### Filter Data
+```{r}
+shotsA <- shots %>%
+  filter(team == "Team A")
+shotsB <- shots %>%
+  filter(team == "Team B")
+```
+
+## Finding Shot Distribution
+For all “Non Corner” 3’s (where Y > 7.8), the 3PT line is 23.75 ft from the center of the hoop
+For all “Corner” 3’s (where Y <= 7.8), the 3PT line is 22 feet from the court’s Y-axis at all
+points (note the definition of “Corner” 3 is not determined by the “break” in the arc)
+
+### Filter Data
+```{r}
+shotsAC3 <- shotsA %>%
+  filter((x > 22 & y < 7.8) | (x < -22 & y < 7.8))
+
+summary(shotsAC3)
+
+shotsANC3 <- shotsA %>%
+  filter((x > 23.75 & y > 7.7)  | (x < -23.75 & y > 7.7))
+
+summary(shotsANC3)
+
+shotsA2PT <- shotsA %>%
+  filter(y > 7.8 | (y < 7.8 & (x < 22 & x > -22)))
+
+summary(shotsA2PT)
+```
+
+```{r}
+shotsBC3 <- shotsB %>%
+  filter((x > 22 & y < 7.8) | (x < -22 & y < 7.8))
+
+summary(shotsBC3)
+
+shotsBNC3 <- shotsB %>%
+  filter((x > 23.75 & y > 7.7)  | (x < -23.75 & y > 7.7))
+
+summary(shotsBNC3)
+
+shotsB2PT <- shotsB %>%
+  filter(y > 7.7 | (y < 7.8 & (x < 22 & x > -22)))
+
+summary(shotsB2PT)
+```
+
+### Distribution
+
+It appears that neither team attempted a Non-Corner 3. No shot in the entire dataset has x > 23.75 which is the minimum needed for it to be considered a Non-Corner 3. Meaning each team only took a Corner Three or a 2 pointer.
+
+Summary Statistics show that there are 280 shots for Team A and 280 for Team B. 
+
+For Team A summary shows 20 Corner 3 shots: 20/280 = .07142857 or 7.142857% of their shots are Corner Threes, meaning that: 260/280 = .92857143 or 92.857143% of there shots are two pointers.
+
+For Team B summary shows 21 Corner 3 shots: 21/280 = .075 or 7.5% of their shots are Corner Threes, meaning that: 259/280 = .925 or 92.5% of their shots were two pointers.
+
+## Finding eFG%
+
+eFG% = (FGM + (0.5 x 3PM)) / FGA
+
+### Team A
+
+Corner 3
+```{r}
+sum(with(shotsAC3,fgmade == "1"))
+```
+eFG% = (8 + (0.5 x 8)) / 20 = 0.6 or 60%
+
+2 Point
+```{r}
+sum(with(shotsA2PT,fgmade == "1"))
+```
+eFG% = (97 + (0.5 x 0)) / 260 = 0.3731 or 37.31%
+
+Non-Corner 3
+eFG% = (0 + (0.5 x 0)) / 0 = 0%
+
+
+### Team B
+
+Corner 3
+```{r}
+sum(with(shotsBC3,fgmade == "1"))
+```
+eFG% = (5 + (0.5 x 5)) / 21 = 0.3571 or 35.71%
+
+2 Point
+```{r}
+sum(with(shotsB2PT,fgmade == "1"))
+```
+eFG% = (110 + (0.5 x 0)) / 259 = 0.4247 or 42.47%
+
+Non-Corner 3
+eFG% = (0 + (0.5 x 0)) / 0 = 0%
+
